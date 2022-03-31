@@ -96,7 +96,7 @@ CNN_PR = Sequential(
     Conv2d(6, 18, (3,3), padding="valid"),
     ReLU(),
     Flatten(),
-    Linear(2592, 72),  # TODO
+    Linear(2592, 72),
     Linear(72, OUTPUT_SHAPE[0]*OUTPUT_SHAPE[1]),
     Unflatten(dim=1, unflattened_size=OUTPUT_SHAPE)
 )
