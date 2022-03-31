@@ -45,7 +45,7 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
         coarse_demeaned_arr = torch.Tensor(coarse_demeaned.values.reshape(coarse_grid_dims)).unsqueeze(dim=1)  # pad with channel dim
 
         fine_grid_dims = [len(dim) for dim in fine_demeaned.index.levels]  # (d, h, w)
-        fine_demeaned_arr = torch.Tensor(fine_demeaned.values.reshape(fine_grid_dims)).unsqueeze(dim=1)  # pad with channel dim
+        fine_demeaned_arr = torch.Tensor(fine_demeaned.values.reshape(fine_grid_dims))
 
         # train / validation / test split (70/20/10)
         num_dates = coarse_demeaned_arr.shape[0]

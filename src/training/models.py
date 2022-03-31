@@ -59,7 +59,7 @@ CNN_LM = Sequential(
     Flatten(),
     Linear(648, 20),
     Linear(20, OUTPUT_SHAPE[0]*OUTPUT_SHAPE[1]),
-    Unflatten(1, OUTPUT_SHAPE)
+    Unflatten(dim=1, unflattened_size=OUTPUT_SHAPE)
 )
 
 
