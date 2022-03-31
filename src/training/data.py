@@ -10,6 +10,7 @@ import xarray as xr
 
 from torch.utils.data import DataLoader, TensorDataset
 
+CPUS_AVAILABLE = os.cpu_count() // 2
 
 class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
     """ A PyTorch Lightning data module wrapping paired coarse-grid and fine-grid weather
@@ -59,11 +60,14 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
         self.test = TensorDataset(c_test, f_test)
 
     def train_dataloader(self):
-        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(
+            self.train, batch_size=self.batch_size, shuffle=True,
+            num_workers=min(6, CPUS_AVAILABLE)
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.validation, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(self.validation, batch_size=self.batch_size)
 
     def test_dataloader(self):
-        return DataLoader(self.test, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(self.test, batch_size=self.batch_size)
 
