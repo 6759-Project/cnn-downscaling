@@ -66,8 +66,9 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
-        return DataLoader(self.validation, batch_size=self.batch_size)
+        return DataLoader(self.validation, batch_size=self.batch_size,
+            num_workers=min(6, CPUS_AVAILABLE)
+        )
 
     def test_dataloader(self):
         return DataLoader(self.test, batch_size=self.batch_size)
-

@@ -6,7 +6,7 @@ import torch
 import wandb
 
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from data import WeatherBenchSuperresolutionDataModule
 from models import LitSuperresolutionModelWrapper
@@ -23,6 +23,7 @@ def cli_main():
     parser = ArgumentParser("Superresolution CNN Trainer")
     parser.add_argument('-b', '--batch_size', default=32, type=int)
     parser.add_argument('-d', '--data_dir', default="./data/processed/temp/", type=str)
+    parser.add_argument('-m', '--model', default="LM", type=str)
     parser = pl.Trainer.add_argparse_args(parser)
     args = parser.parse_args()
 
@@ -31,7 +32,7 @@ def cli_main():
     # ------------
     pl.seed_everything(1729)
 
-    model = LitSuperresolutionModelWrapper(model_keyword="LM")
+    model = LitSuperresolutionModelWrapper(model_keyword=args.model)
 
     data_module = WeatherBenchSuperresolutionDataModule(
         coarse_dir = os.path.join(args.data_dir, COARSE_SUB_DIR),
@@ -44,7 +45,13 @@ def cli_main():
     # ------------
     trainer = pl.Trainer(
         gpus=1, accelerator='gpu',
-        callbacks=[EarlyStopping(monitor="Validation Loss", mode="min")],
+        callbacks=[
+            EarlyStopping(monitor="Validation Loss", mode="min", patience=3),
+            ModelCheckpoint(
+                monitor="Validation Loss", mode="min",
+                filename="best_val_loss_{epoch:04d}"
+            )
+        ],
         logger = WandbLogger(project="cnn", entity="6759-proj", save_dir="./logs/")
     )
     trainer.fit(model, data_module)
