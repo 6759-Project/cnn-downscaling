@@ -101,6 +101,39 @@ CNN_PR = Sequential(
     Unflatten(dim=1, unflattened_size=OUTPUT_SHAPE)
 )
 
+CNN_PR_scaled = Sequential(
+    Conv2d(1, 3, (3,3), padding="valid"),
+    ReLU(),
+    Conv2d(3, 5, (3,3), padding="valid"),
+    ReLU(),
+    Conv2d(5, 13, (3,3), padding="valid"),
+    ReLU(),
+    Conv2d(13, 55, (3,3), padding="valid"),
+    ReLU(),
+    Conv2d(55, 21, (3,3), padding="valid"),
+    ReLU(),
+    Flatten(),
+    Linear(1344, 398),
+    Linear(398, OUTPUT_SHAPE[0]*OUTPUT_SHAPE[1]),
+    Unflatten(dim=1, unflattened_size=OUTPUT_SHAPE)
+)
+
+CNN_PR_super = Sequential(
+    Conv2d(1, 5, (3,3), padding="valid"),
+    ReLU(),
+    Conv2d(5, 21, (3,3), padding="valid"),
+    ReLU(),
+    Conv2d(21, 55, (3,3), padding="valid"),
+    ReLU(),
+    Conv2d(55, 144, (3,3), padding="valid"),
+    ReLU(),
+    Flatten(),
+    Linear(14400, 2592),
+    Linear(2592, 1344),
+    Linear(1344, OUTPUT_SHAPE[0]*OUTPUT_SHAPE[1]),
+    Unflatten(dim=1, unflattened_size=OUTPUT_SHAPE)
+)
+
 CNN_dense = Sequential(
     Conv2d(1, 6, (3,3), padding="valid"),
     ReLU(),
@@ -124,6 +157,8 @@ def get_model(keyword: str):
         "1": CNN_1,
         "10": CNN_10,
         "PR": CNN_PR,
+        "PR-scaled": CNN_PR_scaled,
+        "PR-super": CNN_PR_super,
         "dense": CNN_dense
     }
 

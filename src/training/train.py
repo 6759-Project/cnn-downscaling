@@ -46,7 +46,7 @@ def cli_main():
     trainer = pl.Trainer(
         gpus=1, accelerator='gpu',
         callbacks=[
-            EarlyStopping(monitor="Validation Loss", mode="min", patience=3),
+            EarlyStopping(monitor="Validation Loss", mode="min", patience=9),
             ModelCheckpoint(
                 monitor="Validation Loss", mode="min",
                 filename="best_val_loss_{epoch:04d}"
