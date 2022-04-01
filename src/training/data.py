@@ -6,9 +6,14 @@ import os
 
 import pytorch_lightning as pl
 import torch
+
+import numpy as np
 import xarray as xr
 
 from torch.utils.data import DataLoader, TensorDataset
+
+from typing import List
+
 
 CPUS_AVAILABLE = os.cpu_count() // 2
 
@@ -49,8 +54,8 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
         fine_demeaned_arr = torch.Tensor(fine_demeaned.values.reshape(fine_grid_dims))
 
         # train / validation / test split (70/20/10)
-        num_dates = coarse_demeaned_arr.shape[0]
-        range_splits = [int(pct*num_dates) for pct in [.7, .2, .1]]
+        num_inds = coarse_demeaned_arr.shape[0]
+        range_splits = [int(pct*num_inds) for pct in [.7, .2, .1]]
 
         c_train, c_valid, c_test = torch.split(coarse_demeaned_arr, range_splits)
         f_train, f_valid, f_test = torch.split(fine_demeaned_arr, range_splits)
@@ -58,6 +63,9 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
         self.train = TensorDataset(c_train, f_train)
         self.validation = TensorDataset(c_valid, f_valid)
         self.test = TensorDataset(c_test, f_test)
+
+        # store date metadata for future use
+        self.split_date_ranges = self.split_indices(self.coarse, range_splits)
 
     def train_dataloader(self):
         return DataLoader(
@@ -72,3 +80,27 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
 
     def test_dataloader(self):
         return DataLoader(self.test, batch_size=self.batch_size)
+
+    @staticmethod
+    def split_indices(pdf: 'DataFrame', range_splits: List[int]):
+        """ Returns training, validation, and test set index ranges.
+
+            Arguments:
+             * pdf: a dataframe where length of the level 0 index equals sum(range_splits)
+             * range_splits: a list of 3 integers corresponding to size of train/valid/test
+        """
+        ind0 = pdf.index.levels[0]
+
+        if sum(range_splits) != len(ind0):
+            raise ValueError(
+                f"length of first index ({len(ind0)}) should equal sum of range_splits {sum(range_splits)}"
+            )
+
+        last_ind_ilocs = np.cumsum(range_splits) - 1
+        last_inds = ind0[last_ind_ilocs]
+
+        train_inds = ind0[ind0 <= last_inds[0]]
+        val_inds = ind0[(ind0 > last_inds[0]) & (ind0 <= last_inds[1])]
+        test_inds = ind0[ind0 > last_inds[1]]
+
+        return train_inds, val_inds, test_inds
