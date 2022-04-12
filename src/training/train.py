@@ -40,20 +40,27 @@ def cli_main():
         batch_size = args.batch_size
     )
 
+    wandb_exp = wandb.init(project="cnn", entity="6759-proj")
+
+    if not os.path.exists("./artifacts/checkpoints/"):
+        os.makedirs("./artifacts/checkpoints/")
+
     # ------------
     # training
     # ------------
     trainer = pl.Trainer(
-        gpus=1, accelerator='gpu',
+        gpus=1, accelerator='gpu', max_epochs=500,
         callbacks=[
             EarlyStopping(monitor="Validation Loss", mode="min", patience=9),
             ModelCheckpoint(
                 monitor="Validation Loss", mode="min",
-                filename="best_val_loss_{epoch:04d}"
+                dirpath=f"./artifacts/checkpoints/{wandb_exp.name}/",
+                filename=f"{wandb_exp.name}_best_val_loss_" + "{epoch:04d}"
             )
         ],
-        logger = WandbLogger(project="cnn", entity="6759-proj", save_dir="./logs/")
+        logger = WandbLogger(save_dir="./logs/")
     )
+
     trainer.fit(model, data_module)
 
     # ------------
