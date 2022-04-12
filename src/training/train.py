@@ -42,6 +42,9 @@ def cli_main():
 
     wandb_exp = wandb.init(project="cnn", entity="6759-proj")
 
+    if not os.path.exists("./artifacts/checkpoints/"):
+        os.makedirs("./artifacts/checkpoints/")
+
     # ------------
     # training
     # ------------
