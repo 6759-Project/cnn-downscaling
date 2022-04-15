@@ -6,9 +6,14 @@ import os
 
 import pytorch_lightning as pl
 import torch
+
+import numpy as np
 import xarray as xr
 
 from torch.utils.data import DataLoader, TensorDataset
+
+from typing import List
+
 
 CPUS_AVAILABLE = os.cpu_count() // 2
 
@@ -37,10 +42,10 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
     def setup(self, stage):
         """ Determines transformation, splits, etc. """
         # demean
-        daily_means = self.coarse.groupby("date").mean()
-        daily_std = self.coarse.groupby("date").std()
-        coarse_standardized = (self.coarse - daily_means) / daily_std
-        fine_standardized = (self.fine - daily_means) / daily_std  # can't assume access to fine-grid means!
+        self.daily_means = self.coarse.groupby("date").mean()
+        self.daily_std = self.coarse.groupby("date").std()
+        coarse_standardized = (self.coarse - self.daily_means) / self.daily_std
+        fine_standardized = (self.fine - self.daily_means) / self.daily_std  # can't assume access to fine-grid means!
 
         # reshape to gridded tensors
         coarse_grid_dims = [len(dim) for dim in coarse_standardized.index.levels]  # (d, h, w)
@@ -60,6 +65,11 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
         self.validation = TensorDataset(c_valid, f_valid)
         self.test = TensorDataset(c_test, f_test)
 
+        # store date metadata for future use
+        self.daily_means.columns = ["mean"]
+        self.daily_std.columns = ["std"]
+        self.split_date_ranges = self.split_indices(self.coarse, range_splits)
+
     def train_dataloader(self):
         return DataLoader(
             self.train, batch_size=self.batch_size, shuffle=True, num_workers=1
@@ -71,6 +81,29 @@ class WeatherBenchSuperresolutionDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self):
-        return DataLoader(
-            self.test, batch_size=self.batch_size, num_workers=1
+        return DataLoader(self.test, batch_size=self.batch_size, num_workers=1
         )
+
+    @staticmethod
+    def split_indices(pdf: 'DataFrame', range_splits: List[int]):
+        """ Returns training, validation, and test set index ranges.
+
+            Arguments:
+             * pdf: a dataframe where length of the level 0 index equals sum(range_splits)
+             * range_splits: a list of 3 integers corresponding to size of train/valid/test
+        """
+        ind0 = pdf.index.levels[0]
+
+        if sum(range_splits) != len(ind0):
+            raise ValueError(
+                f"length of first index ({len(ind0)}) should equal sum of range_splits {sum(range_splits)}"
+            )
+
+        last_ind_ilocs = np.cumsum(range_splits) - 1
+        last_inds = ind0[last_ind_ilocs]
+
+        train_inds = ind0[ind0 <= last_inds[0]]
+        val_inds = ind0[(ind0 > last_inds[0]) & (ind0 <= last_inds[1])]
+        test_inds = ind0[ind0 > last_inds[1]]
+
+        return train_inds, val_inds, test_inds
